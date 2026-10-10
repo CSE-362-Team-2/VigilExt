@@ -1,5 +1,6 @@
 const express = require('express');
 const { apiKeyAuth } = require('./middleware/apiKeyAuth');
+const { createPaymentsRouter } = require('./routes/payments');
 
 function createApp() {
   const app = express();
@@ -13,6 +14,8 @@ function createApp() {
   app.get('/v1/me', apiKeyAuth, (req, res) => {
     res.status(200).json({ merchant: req.merchant });
   });
+
+  app.use('/v1/payments', apiKeyAuth, createPaymentsRouter());
 
   // 404 handler returns JSON so invalid input never leaks as HTML or 500.
   app.use((req, res) => {

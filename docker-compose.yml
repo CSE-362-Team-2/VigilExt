@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-vigil}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vigil}
-      POSTGRES_DB: ${POSTGRES_DB:-vigil}
+      POSTGRES_USER: ${POSTGRES_USER:-vigilnext}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vigilnext}
+      POSTGRES_DB: ${POSTGRES_DB:-vigilnext}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-vigil}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-vigilnext}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,7 +24,7 @@ services:
         condition: service_healthy
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://${POSTGRES_USER:-vigil}:${POSTGRES_PASSWORD:-vigil}@db:5432/${POSTGRES_DB:-vigil}
+      DATABASE_URL: postgres://${POSTGRES_USER:-vigilnext}:${POSTGRES_PASSWORD:-vigilnext}@db:5432/${POSTGRES_DB:-vigilnext}
     ports:
       - "${API_PORT:-3000}:3000"
 

@@ -7,7 +7,7 @@ function createApp() {
   app.use(express.json());
 
   app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'vigil' });
+    res.status(200).json({ status: 'ok', service: 'vigilnext' });
   });
 
   // Authenticated namespace. All merchant routes live under /v1.

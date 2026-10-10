@@ -3,7 +3,7 @@ const { Client } = require('pg');
 const { hashApiKey } = require('../src/utils/apiKey');
 
 async function main() {
-  const rawKey = process.env.TEST_API_KEY || 'vigil_test_key_123';
+  const rawKey = process.env.TEST_API_KEY || 'vigilnext_test_key_123';
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('DATABASE_URL is not set');

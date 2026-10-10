@@ -1,4 +1,4 @@
-# Vigil - Risk-Aware Payment Gateway
+# VigilNext - Risk-Aware Payment Gateway
 
 Week 1: planning and skeleton. Express API with merchant API key auth,
 PostgreSQL schema, and payment state machine. No real charging yet.

@@ -1,4 +1,4 @@
-# Vigil Design Document - Week 1
+# VigilNext Design Document - Week 1
 
 ## 1. Goal
 Build a payment gateway that sits between merchant checkout and a payment processor.
@@ -23,13 +23,13 @@ Out of scope for Week 1:
   risk engine, OTP, reviewer UI. These arrive in Week 2 to Week 4.
 
 ## 3. Actors
-- Customer: pays on merchant checkout. Does not call Vigil directly in Week 1.
-- Merchant: server side client. Holds API key. Calls Vigil REST API.
+- Customer: pays on merchant checkout. Does not call VigilNext directly in Week 1.
+- Merchant: server side client. Holds API key. Calls VigilNext REST API.
 - Reviewer: human operator. Defined here for future weeks. No endpoints yet.
 
 ## 4. Payment Flow (Week 1 skeleton)
 1. Merchant calls `POST /v1/payments` with amount, currency, idempotency key.
-2. Vigil validates API key and input, creates row in `created` state.
+2. VigilNext validates API key and input, creates row in `created` state.
 3. Merchant calls authorize, then capture, then optionally refund.
 4. Merchant polls `GET /v1/payments/:id` for current status.
 5. Invalid state transitions are rejected with 400.
@@ -39,7 +39,7 @@ transitions and return stub responses backed by the state machine module.
 
 ## 5. Architecture
 ```
-merchant checkout -> Vigil API (Express) -> PostgreSQL
+merchant checkout -> VigilNext API (Express) -> PostgreSQL
                          |
                     migrations + api key middleware
 ```
@@ -56,7 +56,7 @@ merchant checkout -> Vigil API (Express) -> PostgreSQL
 
 Auth: header `x-api-key: <merchant key>`. Missing or unknown key returns 401.
 
-- `GET /health` -> `{ status: "ok", service: "vigil" }`
+- `GET /health` -> `{ status: "ok", service: "vigilnext" }`
 - `POST /v1/payments`
   Request: `{ amount: 1000, currency: "USD", idempotency_key: "abc-123" }`
   Response 201: `{ id, status: "created", amount, currency }`

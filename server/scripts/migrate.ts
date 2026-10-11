@@ -1,9 +1,9 @@
-require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { Client } from 'pg';
 
-async function main() {
+async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('DATABASE_URL is not set');
@@ -18,10 +18,10 @@ async function main() {
 
   try {
     await client.query(
-      'CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())'
+      'CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())',
     );
 
-    const applied = await client.query('SELECT filename FROM schema_migrations');
+    const applied = await client.query<{ filename: string }>('SELECT filename FROM schema_migrations');
     const appliedSet = new Set(applied.rows.map((r) => r.filename));
 
     for (const file of files) {
@@ -39,7 +39,7 @@ async function main() {
 
     console.log('migrations complete');
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => undefined);
     console.error(err);
     process.exitCode = 1;
   } finally {
@@ -47,4 +47,4 @@ async function main() {
   }
 }
 
-main();
+void main();

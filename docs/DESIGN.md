@@ -14,7 +14,10 @@ Functional:
 - All data is stored in PostgreSQL.
 
 Non functional:
-- Node.js + Express API, PostgreSQL 16, Docker Compose for local env.
+- Node.js + Express API with TypeScript (Node 22 in Docker), PostgreSQL 16,
+- pnpm for package management (per-package lockfiles). `tsc` builds
+  `server/src/` + `server/scripts/` to `server/dist/`;
+  dev and one-off scripts run from source via `tsx`.
 - JSON API, stateless auth, input validation returns 4xx never 500 for bad input.
 - Secrets via environment variables only.
 
@@ -39,18 +42,21 @@ transitions and return stub responses backed by the state machine module.
 
 ## 5. Architecture
 ```
-merchant checkout -> VigilNext API (Express) -> PostgreSQL
-                         |
-                    migrations + api key middleware
+browser -> Caddy (:80) -> client (static) | server (Express + TypeScript) -> PostgreSQL
+                               /api/* strips prefix to /*, static rest
 ```
-- `src/app.js`: Express app factory.
-- `src/server.js`: process entrypoint.
-- `src/routes/payments.js`: REST handlers.
-- `src/middleware/apiKeyAuth.js`: merchant auth.
-- `src/db.js`: pg pool.
-- `src/domain/paymentStates.js`: allowed transitions.
-- `scripts/migrate.js`: runs SQL files in `migrations/` in order.
-- `docker-compose.yml`: `db` and `api` services.
+Monorepo packages: `server/` (API), `client/` (Week 1 placeholder page only).
+`docker-compose.yml` runs `caddy`, `client`, `server`, `db` services.
+- `server/src/app.ts`: Express app factory.
+- `server/src/server.ts`: process entrypoint.
+- `server/src/routes/payments.ts`: REST handlers.
+- `server/src/middleware/apiKeyAuth.ts`: merchant auth.
+- `server/src/db.ts`: pg pool.
+- `server/src/types.ts`: shared `Merchant`/`PaymentRow` types plus Express request augmentation.
+- `server/src/domain/paymentStates.ts`: allowed transitions.
+- `server/scripts/migrate.ts`: runs SQL files in `server/migrations/` in order.
+- `client/src/App.tsx`: placeholder page calling `GET /api/health`.
+  The merchant dashboard and reviewer queue arrive in Week 4.
 
 ## 6. REST API Contract (v1)
 
@@ -67,6 +73,8 @@ Auth: header `x-api-key: <merchant key>`. Missing or unknown key returns 401.
 - `POST /v1/payments/:id/refund` -> `refunded`
 
 Validation errors return 400 with `{ error }`. Unknown payment returns 404.
+Malformed JSON returns 400 `invalid_json`; non-UUID payment ids return 404
+`payment_not_found` instead of leaking a 500 from the database driver.
 Week 1 implements contract and state validation. Persistence of full payment
 lifecycle is completed in Week 2.
 
@@ -98,7 +106,7 @@ Tables: `merchants`, `payments`, `ledger_entries`.
 - `amount INTEGER NOT NULL CHECK (amount > 0)`
 - `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
 
-See `migrations/001_init.sql` for the source of truth.
+See `server/migrations/001_init.sql` for the source of truth.
 
 ## 8. Payment State Machine
 Allowed transitions:
@@ -109,7 +117,8 @@ Allowed transitions:
 - `captured -> refunded`
 
 All other transitions are invalid. Terminal states: `failed`, `refunded`.
-Module: `src/domain/paymentStates.js` exports `canTransition(from, to)`.
+Module: `server/src/domain/paymentStates.ts` exports `canTransition(from, to)` with a
+`PaymentStatus` union type (`created | authorised | captured | failed | refunded`).
 
 ## 9. Merchant API Key Authentication
 - Keys are random strings issued out of band.
@@ -119,7 +128,11 @@ Module: `src/domain/paymentStates.js` exports `canTransition(from, to)`.
 - Rate limiting and key rotation are Week 4 work.
 
 ## 10. Local Environment
-- Copy `.env.example` to `.env`.
-- Run `docker compose up --build`.
-- Run `npm run migrate` to apply schema.
+- Install pnpm (via `corepack enable`), then copy root `.env.example` to `.env`.
+- Run `docker compose up -d db`, then from `server/`: `pnpm install`,
+  `pnpm run migrate`, `pnpm run seed:test-merchant`, `pnpm dev`.
+- From `client/`: `pnpm install`, `pnpm dev` (placeholder page on :5173).
+- Run `docker compose up --build` for the full production stack.
 - Check `GET http://localhost:3000/health`.
+- `pnpm run typecheck` (in `server/`) must pass; `pnpm run build` emits
+  `server/dist/` (`dist/src/server.js` is the production entrypoint).

@@ -1,40 +1,114 @@
 # VigilNext - Risk-Aware Payment Gateway
 
-Week 1: planning and skeleton. Express API with merchant API key auth,
-PostgreSQL schema, and payment state machine. No real charging yet.
+Week 1: planning and skeleton. Monorepo with an Express API (`server/`),
+a placeholder web client (`client/`), PostgreSQL, and Caddy as the local
+reverse proxy. No real charging yet.
 
 ## Stack
-- Node.js 20 + Express 4
-- PostgreSQL 16 via Docker Compose
+- Node.js 22 + Express 4 + TypeScript 5 (`server/`)
+- Vite + React 19 + TypeScript (`client/`, Week 1 placeholder page only)
+- PostgreSQL 16 via Docker Compose, Caddy 2 as entrypoint
+- pnpm for package management (per-package lockfiles)
 - Plain SQL migrations
 
-## Quick Start
+## Prerequisites
 
-1. Copy env:
-   `cp .env.example .env`
-2. Start Postgres:
-   `docker compose up -d db`
-3. Install deps:
-   `npm install`
-4. Migrate:
-   `npm run migrate`
-5. Seed test merchant:
-   `npm run seed:test-merchant`
-6. Start API:
-   `npm run dev`
-7. Check health:
-   `curl http://localhost:3000/health`
+- [Node.js](https://nodejs.org/) (v22 or higher)
+- [pnpm](https://pnpm.io/) (enable via Corepack: `corepack enable`)
+- [Docker](https://www.docker.com/) & Docker Compose
 
-Or run everything in Docker:
-`docker compose up --build`
+## Environment Configuration
+
+Create a `.env` file in the root directory (see `.env.example`):
+
+```
+POSTGRES_DB_NAME=vigilnext
+POSTGRES_USER=vigilnext
+POSTGRES_PASSWORD=vigilnext
+POSTGRES_PORT=5432
+API_PORT=3000
+TEST_API_KEY=vigilnext_test_key_123
+```
+
+## Running for Development
+
+1. Start the database:
+
+```
+docker compose up -d db
+```
+
+2. Install dependencies and start the server:
+
+```
+cd server
+pnpm install
+pnpm run migrate
+pnpm run seed:test-merchant
+pnpm dev
+```
+
+3. Install dependencies and start the client:
+
+```
+cd client
+pnpm install
+pnpm dev
+```
+
+- API: `http://localhost:3000` (health at `/health`)
+- Client: `http://localhost:5173` (proxies `/api/*` to the API)
+
+Type check the server with `pnpm run typecheck` (from `server/`).
+
+## Running for Production
+
+```
+# Build and start all services in detached mode
+docker compose up -d --build
+
+# View real-time logs across all services
+docker compose logs -f
+
+# View logs for server only
+docker compose logs -f server
+```
+
+Caddy serves the client on port 80 and proxies `/api/*` to the server
+(prefix stripped, so `/api/health` reaches `/health`).
+
+## Database Management
+
+```
+# Open interactive psql prompt
+docker exec -it vigilext-db-1 psql -U vigilnext -d vigilnext
+```
+
+## Stopping and Cleaning up
+
+```
+# Stop containers
+docker compose down
+
+# Stop containers AND remove persistent database volumes
+docker compose down -v
+```
+
+## Service Ports and Addresses
+
+| Service | Local URL / Address | Container Port |
+| --- | --- | --- |
+| **Caddy (entrypoint)** | `http://localhost` | 80, 443 |
+| **Client** | via Caddy only (dev: `http://localhost:5173`) | 80 |
+| **Express API Server** | `http://localhost:3000`, `/api/*` via Caddy | 3000 |
+| **PostgreSQL Database** | `postgres://localhost:5432` | 5432 |
 
 ## Auth
-All `/v1/*` routes require header `x-api-key`.
-Missing key returns 401 `missing_api_key`. Unknown key returns 401 `invalid_api_key`.
-Only the SHA256 hash is stored in `merchants.api_key_hash`.
 
-Get current merchant:
-`curl -H "x-api-key: $TEST_API_KEY" http://localhost:3000/v1/me`
+All `/v1/*` API routes require header `x-api-key`.
+Missing key returns 401 `missing_api_key`. Unknown key returns 401
+`invalid_api_key`. Only the SHA256 hash is stored in
+`merchants.api_key_hash`.
 
 ## API Contract (v1 skeleton)
 
@@ -48,49 +122,16 @@ Get current merchant:
 | POST | /v1/payments/:id/capture | `authorised` to `captured` |
 | POST | /v1/payments/:id/refund | `captured` to `refunded` |
 
-Create example:
-```
-curl -X POST http://localhost:3000/v1/payments \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $TEST_API_KEY" \
-  -d '{"amount":1000,"currency":"USD","idempotency_key":"order-1"}'
-```
-
 Validation errors return 400. Duplicate `idempotency_key` for the same
-merchant returns 409. Invalid state change returns 400 `invalid_transition`.
+merchant returns 409. Invalid state change returns 400
+`invalid_transition`. Malformed JSON returns 400 `invalid_json`.
+Unknown payment ids return 404 `payment_not_found`.
 
-Authorize with `{"fail": true}` moves to `failed` for skeleton testing.
-
-## State Machine
-Allowed:
-- `created` to `authorised`, `failed`
-- `authorised` to `captured`, `failed`
-- `captured` to `refunded`
-
-See `src/domain/paymentStates.js`. Terminal states: `failed`, `refunded`.
-
-## Database
-Tables: `merchants`, `payments`, `ledger_entries`.
-`ledger_entries` is reserved for Week 2 double entry posting.
-Migrations live in `migrations/`. Runner: `scripts/migrate.js`.
-
-## Project Layout
-```
-src/app.js - Express factory
-src/server.js - entrypoint
-src/db.js - pg pool
-src/middleware/apiKeyAuth.js - merchant auth
-src/routes/payments.js - payment endpoints
-src/domain/paymentStates.js - state machine
-src/utils/apiKey.js - SHA256 helper
-scripts/migrate.js - SQL runner
-scripts/seedTestMerchant.js - local test merchant
-docs/DESIGN.md - Week 1 design
-```
+Details live in `server/README.md` and `docs/DESIGN.md`.
 
 ## Week 1 Exit Check
 - `docker compose config` passes
-- `npm run migrate` applies `001_init.sql` cleanly, rerun shows `skip`
+- `pnpm run migrate` (from `server/`) applies `001_init.sql` cleanly, rerun shows `skip`
 - `GET /health` returns 200
 - `GET /v1/me` without key returns 401
 - Full flow `created` to `authorised` to `captured` to `refunded` returns 200

@@ -1,0 +1,16 @@
+# Local reverse proxy. :80 serves the client; /api/* strips the prefix
+# and proxies to the Express server (so /api/health -> /health and
+# /api/v1/* -> /v1/*). Swap in a domain block with TLS for production
+# in Week 5.
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		uri strip_prefix /api
+		reverse_proxy server:3000
+	}
+
+	handle {
+		reverse_proxy client:80
+	}
+}

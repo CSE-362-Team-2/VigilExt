@@ -1,0 +1,28 @@
+{
+  "name": "server",
+  "version": "0.1.0",
+  "description": "VigilNext Risk-Aware Payment Gateway API - Week 1 skeleton",
+  "packageManager": "pnpm@11.28.5",
+  "main": "dist/src/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/server.js",
+    "dev": "tsx watch src/server.ts",
+    "migrate": "tsx scripts/migrate.ts",
+    "seed:test-merchant": "tsx scripts/seedTestMerchant.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/express": "~4.17.21",
+    "@types/node": "~20.12.12",
+    "@types/pg": "~8.11.0",
+    "tsx": "~4.7.2",
+    "typescript": "~5.6.2"
+  }
+}

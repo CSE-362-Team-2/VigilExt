@@ -1,32 +1,57 @@
 services:
-  db:
-    image: postgres:16-alpine
+  caddy:
+    image: caddy:2-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-vigilnext}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vigilnext}
-      POSTGRES_DB: ${POSTGRES_DB:-vigilnext}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-vigilnext}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - client
+      - server
 
-  api:
-    build: .
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://${POSTGRES_USER:-vigilnext}:${POSTGRES_PASSWORD:-vigilnext}@db:5432/${POSTGRES_DB:-vigilnext}
+      DATABASE_URL: postgres://${POSTGRES_USER:-vigilnext}:${POSTGRES_PASSWORD:-vigilnext}@db:5432/${POSTGRES_DB_NAME:-vigilnext}
     ports:
       - "${API_PORT:-3000}:3000"
 
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vigilnext}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vigilnext}
+      POSTGRES_DB: ${POSTGRES_DB_NAME:-vigilnext}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-vigilnext} -d $${POSTGRES_DB_NAME:-vigilnext}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

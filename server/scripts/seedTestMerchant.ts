@@ -1,9 +1,9 @@
-require('dotenv').config();
-const { Client } = require('pg');
-const { hashApiKey } = require('../src/utils/apiKey');
+import 'dotenv/config';
+import { Client } from 'pg';
+import { hashApiKey } from '../src/utils/apiKey';
 
-async function main() {
-  const rawKey = process.env.TEST_API_KEY || 'vigilnext_test_key_123';
+async function main(): Promise<void> {
+  const rawKey = process.env.TEST_API_KEY ?? 'vigilnext_test_key_123';
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('DATABASE_URL is not set');
@@ -19,7 +19,7 @@ async function main() {
       `INSERT INTO merchants (name, api_key_hash)
        VALUES ('test merchant', $1)
        ON CONFLICT (api_key_hash) DO NOTHING`,
-      [digest]
+      [digest],
     );
     console.log('test merchant seeded');
   } finally {
@@ -27,7 +27,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error(err);
   process.exit(1);
 });
